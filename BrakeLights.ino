@@ -216,5 +216,7 @@ void processAndDisplayInputs()
 	strcat(szBuf, pRightTurn->GetActive() ? "RIGHT" : "     ");
 	strcat(szBuf, ":");
 	strcat(szBuf, pBackup->GetActive() ? "BACK" : "    ");
+	strcat(szBuf, ":");
+	strcat(szBuf, pPoliceBar->GetActive() ? "POLICE" : "    ");
 	lcd.print(szBuf);
 }
