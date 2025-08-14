@@ -13,6 +13,11 @@
 //   For lab use only; not for highway use.  GPL v3.0
 //
 // History:     Jul-12-2018         Davepl      Created
+//				Aug-12-2025			CBryans		Changed static color to dark red to act as park light
+//												Edited Police Bar colors to act more as safety light for a tow truck or safety vehicle
+//												I left a commented out policebar color matrix for those that may still want that instead
+//												Added wording to LCD for Hazards and Safety lights
+//												Moved Left/Right wording to the outside edges of LCD
 //
 //---------------------------------------------------------------------------
 
@@ -33,14 +38,14 @@ LiquidCrystal_I2C lcd(0x27, LCD_WIDTH, LCD_HEIGHT);  // set the LCD address to 0
 
 #define TOTAL_STRIP_PIXELS 144						// How many pixels in entire string
 #define NUMBER_USED_PIXELS 144						// The number of pixels that we use (normally, all of them)
-#define NUMBER_TURN_PIXELS 50						// How many pixels on the end will be use for turn signals
+#define NUMBER_TURN_PIXELS 50					  	// How many pixels on the end will be use for turn signals
 
-#define LEFT_TURN_PIN  PIND3						// Digital input pins 
+#define LEFT_TURN_PIN  PIND3						  // Digital input pins 
 #define RIGHT_TURN_PIN PIND2
 #define STOP_PIN       PIND4
 #define BACKUP_PIN     PIND5
-#define PoliceBar_PIN  PIND6
-#define TOWTRUCK_PIN   PIND7
+#define PARK_PIN       PIND7
+
 
 #define COLOR_BLACK    (Adafruit_NeoPixel::Color(  0,   0,   0))
 #define COLOR_WHITE    (Adafruit_NeoPixel::Color(255, 255, 255))
@@ -63,12 +68,11 @@ LiquidCrystal_I2C lcd(0x27, LCD_WIDTH, LCD_HEIGHT);  // set the LCD address to 0
 Adafruit_NeoPixel _strip = Adafruit_NeoPixel(TOTAL_STRIP_PIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
 BrakingEvent   * pBraking   = nullptr;
-BackupEvent    * pBackup    = nullptr;
+BackupEvent	   * pBackup    = nullptr;
 SignalEvent    * pLeftTurn  = nullptr;
 SignalEvent    * pRightTurn = nullptr;
 SignalEvent    * pHazard    = nullptr;
 PoliceLightBar * pPoliceBar = nullptr;
-TowTruckLight  * pTowTruck  = nullptr;
 
 
 // IMPORTANT: To reduce NeoPixel burnout risk, add 1000 uF capacitor across
@@ -91,7 +95,6 @@ void setup()
 	pRightTurn = new SignalEvent(&_strip, SignalEvent::SIGNAL_STYLE::RIGHT_TURN);
 	pHazard    = new SignalEvent(&_strip, SignalEvent::SIGNAL_STYLE::HAZARD);
 	pPoliceBar = new PoliceLightBar(&_strip);
-	pTowTruck  = new TowTruckLight(&_strip);
 
 	Serial.begin(115200);
 	Serial.println("BrakeLight Startup");
@@ -107,9 +110,7 @@ void setup()
 	pinMode(RIGHT_TURN_PIN, INPUT_PULLUP);
 	pinMode(STOP_PIN, INPUT_PULLUP);
 	pinMode(BACKUP_PIN, INPUT_PULLUP);
-	pinMode(PoliceBar_PIN, INPUT_PULLUP);
-	pinMode(TowTruck_PIN, INPUT_PULLUP);
-
+  
 	lcd.init();
 	lcd.backlight();
 	lcd.setCursor(0, 0);
@@ -129,6 +130,7 @@ void loop()
 
 void processAndDisplayInputs()
 {
+
 	// Backup
 
 	if (digitalRead(BACKUP_PIN) == 0)
@@ -202,44 +204,36 @@ void processAndDisplayInputs()
 				if (pRightTurn->GetActive() == true)
 					pRightTurn->End();
 			}
-
-				// Tow Truck Light Bar
-
-				if (digitalRead(TowTruck_PIN) == 0)
-				{
-					if (pTowTruck->GetActive() == false)
-						pTowTruck->Begin();
-				}
-				else
-				{
-					if (pTowTruck->GetActive() == true)
-						pTowTruck->End();
-		
-				}
-			}
 		}
 	}
 
-	pBackup->Draw();
+ 	pBackup->Draw();
 	pLeftTurn->Draw();
 	pRightTurn->Draw();
 	pBraking->Draw();
 	pHazard->Draw();
 	pPoliceBar->Draw();
-	pTowTruck->Draw();
 
 	char szBuf[LCD_WIDTH*LCD_HEIGHT + 1];
 	lcd.setCursor(0, 0);
 	szBuf[0] = '\0';
-	strcpy(szBuf, pBraking->GetActive() ? "STOP" : "    ");
+	strcpy(szBuf, pLeftTurn->GetActive() ? "LEFT" : "    ");
 	strcat(szBuf, ":");
-	strcat(szBuf, pLeftTurn->GetActive() ? "LEFT" : "    ");
+	strcat(szBuf, pBraking->GetActive() ? "STOP" : "    ");
+	strcat(szBuf, ":");
+	strcat(szBuf, pBackup->GetActive() ? "Back" : "    ");
 	strcat(szBuf, ":");
 	strcat(szBuf, pRightTurn->GetActive() ? "RIGHT" : "     ");
-	strcat(szBuf, ":");
-	strcat(szBuf, pBackup->GetActive() ? "BACK" : "    ");
-	strcat(szBuf, ":");
-	strcat(szBuf, pTowTruck->GetActive() ? "TOW" : "    ");
-	
+ 	lcd.print(szBuf);
+
+	lcd.setCursor(7, 2);
+	szBuf[0] = '\0';
+	strcpy(szBuf, pHazard->GetActive() ? "Hazard" : "      ");
 	lcd.print(szBuf);
+
+	lcd.setCursor(3, 3);
+	szBuf[0] = '\0';
+	strcpy(szBuf, pPoliceBar->GetActive() ? "Safety Lights" : "             ");
+	lcd.print(szBuf);
+
 }
